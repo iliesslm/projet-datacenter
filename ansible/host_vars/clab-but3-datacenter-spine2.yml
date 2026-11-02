@@ -1,0 +1,26 @@
+bgp_asn: 65000
+loopback_ip: 10.0.0.2/32
+
+interfaces:
+  - name: eth1
+    ip: 10.1.2.0/31 # Vers Leaf 1
+  - name: eth2
+    ip: 10.1.2.2/31 # Vers Leaf 2
+  - name: eth3
+    ip: 10.1.2.4/31 # Vers Leaf 3
+
+underlay_neighbors:
+  - address: 10.1.2.1
+    remote_as: 65011
+  - address: 10.1.2.3
+    remote_as: 65012
+  - address: 10.1.2.5
+    remote_as: 65013
+
+evpn_neighbors:
+  - address: 10.0.0.11
+    remote_as: 65011
+  - address: 10.0.0.12
+    remote_as: 65012
+  - address: 10.0.0.13
+    remote_as: 65013

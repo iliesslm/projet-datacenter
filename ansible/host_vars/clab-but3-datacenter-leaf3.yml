@@ -1,0 +1,37 @@
+bgp_asn: 65013
+loopback_ip: 10.0.0.13/32
+
+interfaces:
+  - name: eth1
+    ip: 10.1.1.5/31 # Vers Spine 1
+  - name: eth2
+    ip: 10.1.2.5/31 # Vers Spine 2
+
+underlay_neighbors:
+  - address: 10.1.1.4
+    remote_as: 65000
+  - address: 10.1.2.4
+    remote_as: 65000
+
+evpn_neighbors:
+  - address: 10.0.0.1
+    remote_as: 65000
+  - address: 10.0.0.2
+    remote_as: 65000
+
+l2_vnis:
+  - vlan: 10
+    vni: 10010
+    bridge: br10
+    vxlan: vxlan10010
+    bridge_ports: []
+  - vlan: 20
+    vni: 10020
+    bridge: br20
+    vxlan: vxlan10020
+    bridge_ports: [eth3]
+  - vlan: 30
+    vni: 10030
+    bridge: br30
+    vxlan: vxlan10030
+    bridge_ports: []

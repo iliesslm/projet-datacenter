@@ -1,0 +1,56 @@
+! Configuration générée automatiquement par Ansible
+!
+frr version 8.4
+frr defaults datacenter
+hostname {{ inventory_hostname | replace('clab-but3-datacenter-', '') }}
+no ipv6 forwarding
+!
+interface lo
+ ip address {{ loopback_ip }}
+!
+{% for intf in interfaces %}
+interface {{ intf.name }}
+ ip address {{ intf.ip }}
+!
+{% endfor %}
+!
+router bgp {{ bgp_asn }}
+ bgp router-id {{ loopback_ip | regex_replace('/32', '') }}
+ no bgp ebgp-requires-policy
+ no bgp default ipv4-unicast
+ bgp bestpath as-path multipath-relax
+{% for neighbor in underlay_neighbors %}
+ neighbor {{ neighbor.address }} remote-as {{ neighbor.remote_as }}
+{% endfor %}
+{% for neighbor in evpn_neighbors %}
+ neighbor {{ neighbor.address }} remote-as {{ neighbor.remote_as }}
+ neighbor {{ neighbor.address }} update-source lo
+ neighbor {{ neighbor.address }} ebgp-multihop 5
+ neighbor {{ neighbor.address }} send-community extended
+{% if 'spine' in inventory_hostname %}
+ neighbor {{ neighbor.address }} next-hop-unchanged
+{% endif %}
+{% endfor %}
+ address-family ipv4 unicast
+	network {{ loopback_ip }}
+{% for neighbor in underlay_neighbors %}
+	neighbor {{ neighbor.address }} activate
+{% endfor %}
+	maximum-paths 2
+ exit-address-family
+ address-family l2vpn evpn
+{% for neighbor in evpn_neighbors %}
+	neighbor {{ neighbor.address }} activate
+{% endfor %}
+{% for vni in l2_vnis | default([]) %}
+	vni {{ vni.vni }}
+	 route-target import 65000:{{ vni.vni }}
+	 route-target export 65000:{{ vni.vni }}
+{% endfor %}
+{% if l2_vnis | default([]) | length > 0 %}
+	advertise-all-vni
+{% endif %}
+ exit-address-family
+!
+line vty
+!

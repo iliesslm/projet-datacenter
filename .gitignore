@@ -1,0 +1,24 @@
+# Containerlab runtime state, generated inventories and TLS material
+/clab-but3-datacenter/
+
+# Private keys, certificates and local credentials
+*.key
+*.pem
+*.crt
+*.csr
+authorized_keys
+.env
+.env.*
+!.env.example
+
+# Ansible transient files
+*.retry
+/.ansible/
+/ansible/.ansible/
+/ansible/.vault_pass
+
+# Editor and operating-system files
+.vscode/
+.DS_Store
+Thumbs.db
+*.swp

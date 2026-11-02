@@ -1,0 +1,25 @@
+#!/bin/sh
+set -eu
+
+nft -f - <<'NFT'
+flush ruleset
+table inet filter {
+  chain input {
+    type filter hook input priority filter; policy drop;
+    iifname "lo" accept
+    ct state established,related accept
+    iifname { "eth1.10", "eth1.20", "eth1.30" } icmp type echo-request accept
+  }
+
+  chain forward {
+    type filter hook forward priority filter; policy drop;
+    ct state established,related accept
+    iifname "eth1.10" oifname "eth1.30" ip daddr 10.10.30.10 udp dport { 1812, 1813 } accept
+    iifname "eth1.20" oifname "eth1.30" ip daddr 10.10.30.10 udp dport { 1812, 1813 } accept
+  }
+
+  chain output {
+    type filter hook output priority filter; policy accept;
+  }
+}
+NFT

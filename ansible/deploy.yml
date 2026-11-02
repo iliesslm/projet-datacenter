@@ -1,0 +1,63 @@
+---
+- name: Deploiement de la configuration Underlay FRRouting
+  hosts: spines, leafs
+  gather_facts: no
+
+  tasks:
+    - name: 1. Verifier les interfaces physiques Containerlab
+      raw: |
+        {% for interface in interfaces %}
+        ip link show dev {{ interface.name }} >/dev/null 2>&1 || { echo "Interface Containerlab absente: {{ interface.name }}"; exit 1; }
+        {% endfor %}
+        {% if vlan_trunk is defined %}
+        ip link show dev {{ vlan_trunk.parent }} >/dev/null 2>&1 || { echo "Interface Containerlab absente: {{ vlan_trunk.parent }}"; exit 1; }
+        {% endif %}
+        {% for vni in l2_vnis | default([]) %}
+        {% for port in vni.bridge_ports %}
+        ip link show dev {{ port.split('.')[0] }} >/dev/null 2>&1 || { echo "Interface Containerlab absente: {{ port.split('.')[0] }}"; exit 1; }
+        {% endfor %}
+        {% endfor %}
+
+    - name: 2. Generer le fichier de configuration localement
+      template:
+        src: templates/frr.j2
+        dest: "/tmp/{{ inventory_hostname }}_frr.conf"
+      delegate_to: localhost
+
+    - name: 3. Activer le demon BGP FRR
+      raw: "sed -i 's/^bgpd=no$/bgpd=yes/' /etc/frr/daemons"
+
+    - name: 4. Creer les bridges, VXLAN et ports locaux
+      raw: "{{ lookup('template', 'templates/linux-bridge.j2') }}"
+
+    - name: 5. Pousser la configuration dans le routeur
+      raw: "cat << 'EOF' > /etc/frr/frr.conf\n{{ lookup('template', 'templates/frr.j2') }}\nEOF"
+
+    - name: 6. Recharger FRR et demarrer les demons configures
+      raw: "/usr/lib/frr/frrinit.sh reload"
+
+- name: Deploiement de la configuration du firewall inter-segments
+  hosts: firewalls
+  gather_facts: no
+
+  tasks:
+    - name: Installer nftables
+      raw: "apk add --no-cache nftables"
+
+    - name: Configurer les interfaces VLAN du firewall
+      raw: "{{ lookup('template', 'templates/firewall-network.j2') }}"
+
+    - name: Appliquer la politique de filtrage
+      raw: "{{ lookup('template', 'templates/firewall-rules.j2') }}"
+
+- name: Configurer les adresses des clients et du serveur AAA
+  hosts: clients, services
+  gather_facts: no
+
+  tasks:
+    - name: Installer iproute2 sur le serveur AAA Alpine
+      raw: "apk add --no-cache iproute2"
+      when: inventory_hostname in groups['services']
+
+    - name: Configurer l'adresse et la route par defaut
+      raw: "{{ lookup('template', 'templates/endpoint-network.j2') }}"

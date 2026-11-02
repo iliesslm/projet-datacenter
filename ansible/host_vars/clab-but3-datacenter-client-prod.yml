@@ -1,0 +1,2 @@
+tenant_ipv4: 10.10.10.10/24
+tenant_gateway: 10.10.10.1

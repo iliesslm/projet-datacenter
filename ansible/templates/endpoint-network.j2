@@ -1,0 +1,7 @@
+#!/bin/sh
+set -eu
+
+ip link set dev eth1 up
+ip addr flush dev eth1
+ip addr add {{ tenant_ipv4 }} dev eth1
+ip route replace default via {{ tenant_gateway }} dev eth1

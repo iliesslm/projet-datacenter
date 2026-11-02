@@ -1,0 +1,29 @@
+#!/bin/sh
+set -eu
+
+ip addr replace {{ loopback_ip }} dev lo
+{% if vlan_trunk is defined %}
+ip link set dev {{ vlan_trunk.parent }} up
+{% for vlan in vlan_trunk.vlans %}
+if ! ip link show dev {{ vlan_trunk.parent }}.{{ vlan }} >/dev/null 2>&1; then
+  ip link add link {{ vlan_trunk.parent }} name {{ vlan_trunk.parent }}.{{ vlan }} type vlan id {{ vlan }}
+fi
+ip link set dev {{ vlan_trunk.parent }}.{{ vlan }} up
+{% endfor %}
+{% endif %}
+{% for vni in l2_vnis | default([]) %}
+if ! ip link show dev {{ vni.bridge }} >/dev/null 2>&1; then
+  ip link add name {{ vni.bridge }} type bridge
+fi
+if ip link show dev {{ vni.vxlan }} >/dev/null 2>&1; then
+  ip link del dev {{ vni.vxlan }}
+fi
+ip link add name {{ vni.vxlan }} type vxlan id {{ vni.vni }} local {{ loopback_ip | regex_replace('/32', '') }} dstport 4789 nolearning
+ip link set dev {{ vni.vxlan }} master {{ vni.bridge }}
+ip link set dev {{ vni.vxlan }} up
+ip link set dev {{ vni.bridge }} up
+{% for port in vni.bridge_ports %}
+ip link set dev {{ port }} master {{ vni.bridge }}
+ip link set dev {{ port }} up
+{% endfor %}
+{% endfor %}

@@ -1,0 +1,14 @@
+#!/bin/sh
+set -eu
+
+ip link set dev {{ vlan_trunk.parent }} up
+{% for vlan in vlan_trunk.vlans %}
+if ! ip link show dev {{ vlan_trunk.parent }}.{{ vlan }} >/dev/null 2>&1; then
+  ip link add link {{ vlan_trunk.parent }} name {{ vlan_trunk.parent }}.{{ vlan }} type vlan id {{ vlan }}
+fi
+ip link set dev {{ vlan_trunk.parent }}.{{ vlan }} up
+{% endfor %}
+{% for intf in tenant_interfaces %}
+ip addr replace {{ intf.address }} dev {{ intf.name }}
+{% endfor %}
+sysctl -w net.ipv4.ip_forward=1

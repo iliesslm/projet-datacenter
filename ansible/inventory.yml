@@ -1,0 +1,29 @@
+all:
+  vars:
+    # Connexion directe via le socket Docker (pas besoin de SSH/Mots de passe)
+    ansible_connection: docker
+
+  children:
+    spines:
+      hosts:
+        clab-but3-datacenter-spine1:
+        clab-but3-datacenter-spine2:
+
+    leafs:
+      hosts:
+        clab-but3-datacenter-leaf1:
+        clab-but3-datacenter-leaf2:
+        clab-but3-datacenter-leaf3:
+
+    firewalls:
+      hosts:
+        clab-but3-datacenter-fw-inter-vrf:
+
+    services:
+      hosts:
+        clab-but3-datacenter-srv-aaa:
+
+    clients:
+      hosts:
+        clab-but3-datacenter-client-prod:
+        clab-but3-datacenter-client-dev:
